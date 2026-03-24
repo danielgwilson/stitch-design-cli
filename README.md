@@ -93,6 +93,7 @@ stitch project create --title "Design Sandbox" --json
 stitch project get <project-id> --json
 stitch screen list --project-id <project-id> --json
 stitch screen get --project-id <project-id> --screen-id <screen-id> --include-image --json
+stitch screen get --project-id <project-id> --screen-id <screen-id-a> --screen-id <screen-id-b> --include-image --include-html --json
 stitch screen generate --project-id <project-id> --prompt "A landing page for a healthcare startup" --device-type DESKTOP --include-image --json
 stitch screen edit --project-id <project-id> --screen-id <screen-id> --prompt "Make the hero more editorial" --json
 stitch screen variants --project-id <project-id> --screen-id <screen-id> --prompt "Explore three lighter brand directions" --variant-count 3 --creative-range EXPLORE --aspect COLOR_SCHEME --aspect LAYOUT --json
@@ -101,8 +102,9 @@ stitch screen variants --project-id <project-id> --screen-id <screen-id> --promp
 ## Design notes
 
 - `project get` calls the official `get_project` tool directly.
-- `screen get` can optionally include HTML and screenshot artifact URLs.
+- `screen get` can optionally include HTML and screenshot artifact URLs, and accepts repeated `--screen-id` flags for batch retrieval.
 - `screen edit` and `screen variants` accept repeated `--screen-id` flags or comma-separated values.
+- `screen variants` now returns explicit follow-up screen IDs plus a ready-to-run `screen get` command, which is useful when project inventory lags behind fresh variants.
 - v1 intentionally stops before design-system and upload flows.
 
 ## Contract

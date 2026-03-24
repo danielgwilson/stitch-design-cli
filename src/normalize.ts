@@ -10,6 +10,21 @@ export function collectStrings(value: string, previous: string[] = []): string[]
   return [...previous, ...splitCsv(value)];
 }
 
+export function buildScreenGetCommand(
+  projectId: string,
+  screenIds: string[],
+  options: { includeHtml?: boolean; includeImage?: boolean; json?: boolean } = {},
+): string | null {
+  const resolved = splitCsv(screenIds);
+  if (!resolved.length) return null;
+  const parts = ["stitch", "screen", "get", "--project-id", projectId];
+  for (const screenId of resolved) parts.push("--screen-id", screenId);
+  if (options.includeHtml) parts.push("--include-html");
+  if (options.includeImage) parts.push("--include-image");
+  if (options.json) parts.push("--json");
+  return parts.join(" ");
+}
+
 export function toProjectId(data: any): string | null {
   if (!data) return null;
   if (typeof data.projectId === "string" && data.projectId) return data.projectId;
@@ -102,13 +117,40 @@ export function createScreenMutationResult(
   screens: any[],
   messages: string[],
   options: { includeHtml?: boolean; includeImage?: boolean },
+  meta: { kind?: "generate" | "edit" | "variants" } = {},
 ): Record<string, unknown> {
-  const items = screens.map((item) => serializeScreen(item, artifactUrlsFromData(item, options)));
+  const items = screens.map((item, index) => {
+    const serialized = serializeScreen(item, artifactUrlsFromData(item, options)) as Record<string, unknown>;
+    serialized.resultIndex = index + 1;
+    if (meta.kind === "variants") serialized.variantIndex = index + 1;
+    if (meta.kind === "variants" && selectedScreenIds?.length === 1) {
+      serialized.sourceScreenId = selectedScreenIds[0];
+    }
+    return serialized;
+  });
+  const returnedScreenIds = items
+    .map((item) => (typeof item.screenId === "string" ? item.screenId : null))
+    .filter((value): value is string => Boolean(value));
   return {
+    kind: meta.kind || null,
     projectId,
     selectedScreenIds: selectedScreenIds && selectedScreenIds.length ? selectedScreenIds : undefined,
     count: items.length,
     messages,
     items,
+    notes:
+      meta.kind === "variants"
+        ? ["Returned screen IDs are authoritative even if project or screen listings lag behind."]
+        : [],
+    followUp: returnedScreenIds.length
+      ? {
+          screenIds: returnedScreenIds,
+          getCommand: buildScreenGetCommand(projectId, returnedScreenIds, {
+            includeHtml: true,
+            includeImage: true,
+            json: true,
+          }),
+        }
+      : null,
   };
 }

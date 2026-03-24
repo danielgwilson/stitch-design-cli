@@ -1,6 +1,6 @@
 {
   "name": "stitch-design-cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Agent-first CLI + skill for Google's official Stitch SDK",
   "license": "MIT",
   "author": "Daniel G Wilson",

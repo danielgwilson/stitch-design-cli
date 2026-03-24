@@ -193,12 +193,38 @@ Failed checks:
 }
 ```
 
+### `stitch screen get --project-id <project-id> --screen-id <screen-id-a> --screen-id <screen-id-b> --include-image --include-html --json`
+
+When exactly one `--screen-id` is provided, `screen get` returns a single screen object. When multiple ids are provided, it returns a list envelope:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "projectId": "4044680601076201931",
+    "count": 2,
+    "items": [
+      {
+        "id": "5386498029230965127",
+        "screenId": "5386498029230965127",
+        "projectId": "4044680601076201931",
+        "title": "Landing Page",
+        "htmlUrl": "https://...",
+        "imageUrl": "https://...",
+        "data": {}
+      }
+    ]
+  }
+}
+```
+
 ### `stitch screen generate --project-id <project-id> --prompt ... --include-image --json`
 
 ```json
 {
   "ok": true,
   "data": {
+    "kind": "generate",
     "projectId": "4044680601076201931",
     "count": 1,
     "messages": [],
@@ -210,9 +236,15 @@ Failed checks:
         "title": "Landing Page",
         "htmlUrl": null,
         "imageUrl": "https://...",
+        "resultIndex": 1,
         "data": {}
       }
-    ]
+    ],
+    "notes": [],
+    "followUp": {
+      "screenIds": ["5386498029230965127"],
+      "getCommand": "stitch screen get --project-id 4044680601076201931 --screen-id 5386498029230965127 --include-html --include-image --json"
+    }
   }
 }
 ```
@@ -223,6 +255,7 @@ Failed checks:
 {
   "ok": true,
   "data": {
+    "kind": "edit",
     "projectId": "4044680601076201931",
     "selectedScreenIds": ["5386498029230965127"],
     "count": 1,
@@ -235,9 +268,15 @@ Failed checks:
         "title": "Landing Page v2",
         "htmlUrl": null,
         "imageUrl": null,
+        "resultIndex": 1,
         "data": {}
       }
-    ]
+    ],
+    "notes": [],
+    "followUp": {
+      "screenIds": ["654321"],
+      "getCommand": "stitch screen get --project-id 4044680601076201931 --screen-id 654321 --include-html --include-image --json"
+    }
   }
 }
 ```
@@ -248,6 +287,7 @@ Failed checks:
 {
   "ok": true,
   "data": {
+    "kind": "variants",
     "projectId": "4044680601076201931",
     "selectedScreenIds": ["5386498029230965127"],
     "count": 3,
@@ -260,9 +300,19 @@ Failed checks:
         "title": "Landing Page Variant 1",
         "htmlUrl": null,
         "imageUrl": null,
+        "resultIndex": 1,
+        "variantIndex": 1,
+        "sourceScreenId": "5386498029230965127",
         "data": {}
       }
-    ]
+    ],
+    "notes": [
+      "Returned screen IDs are authoritative even if project or screen listings lag behind."
+    ],
+    "followUp": {
+      "screenIds": ["variant-1", "variant-2", "variant-3"],
+      "getCommand": "stitch screen get --project-id 4044680601076201931 --screen-id variant-1 --screen-id variant-2 --screen-id variant-3 --include-html --include-image --json"
+    }
   }
 }
 ```
