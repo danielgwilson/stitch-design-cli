@@ -53,13 +53,18 @@ For the common design-iteration flow, the default sequence is:
 
 ## Auth
 
-The recommended human path is API key auth.
+The CLI supports both auth modes exposed by the official Stitch SDK:
+
+- API key
+- OAuth access token plus project id
 
 If `stitch doctor --json` reports missing auth:
 
 - Best interactive path: `stitch auth set`
 - Best ephemeral path: `STITCH_API_KEY=... stitch doctor --json`
 - Saved local config: `printf '%s' "$STITCH_API_KEY" | stitch auth set --stdin`
+- OAuth local config: `stitch auth set --access-token "$STITCH_ACCESS_TOKEN" --project-id "$GOOGLE_CLOUD_PROJECT"`
+- OAuth env path: `STITCH_ACCESS_TOKEN=... GOOGLE_CLOUD_PROJECT=... stitch doctor --json`
 
 Avoid pasting full keys into logs or chat.
 

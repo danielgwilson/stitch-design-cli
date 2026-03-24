@@ -34,7 +34,10 @@ npx -y stitch-design-cli doctor --json
 
 ## Auth
 
-The recommended v1 path is API key auth.
+The CLI supports both auth modes exposed by the official Stitch SDK:
+
+- API key
+- OAuth access token plus project id
 
 Save a key locally:
 
@@ -54,6 +57,22 @@ Or use env directly:
 export STITCH_API_KEY=...
 stitch doctor --json
 ```
+
+Save OAuth locally:
+
+```bash
+stitch auth set --access-token "$STITCH_ACCESS_TOKEN" --project-id "$GOOGLE_CLOUD_PROJECT"
+```
+
+Or use OAuth env directly:
+
+```bash
+export STITCH_ACCESS_TOKEN=...
+export GOOGLE_CLOUD_PROJECT=...
+stitch doctor --json
+```
+
+If `tool list` works but `project list` fails with `AUTH_FAILED`, the configured credentials reached Stitch but were rejected for project access. In that case, rotate the API key or switch to OAuth.
 
 Optional env/config knobs:
 

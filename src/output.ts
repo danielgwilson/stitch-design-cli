@@ -14,6 +14,11 @@ export type CliError = {
 
 const RETRYABLE_CODES = new Set(["RATE_LIMITED", "NETWORK_ERROR"]);
 
+function isInvalidCredentialMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("invalid authentication credentials") || lower.includes("expected oauth 2 access token");
+}
+
 export function toErrorCode(error: unknown): string {
   if (error instanceof StitchError) return error.code;
 
@@ -48,6 +53,16 @@ export function makeError(error: unknown, { code, message }: { code?: string; me
   const resolvedCode = code || explicitCode || stitchError?.code || toErrorCode(error);
   const resolvedMessage = message || explicitMessage || stitchError?.message || "Request failed";
 
+  if (isInvalidCredentialMessage(resolvedMessage)) {
+    return {
+      code: "AUTH_FAILED",
+      message: "Stitch rejected the configured credentials",
+      retryable: false,
+      detail:
+        "The saved credentials can reach Stitch but are not authorized for project access. Use a valid Stitch API key or save OAuth credentials with an access token plus project id.",
+    };
+  }
+
   const result: CliError = {
     code: resolvedCode,
     message: resolvedMessage,
@@ -77,5 +92,5 @@ export function printJson(value: unknown): void {
 }
 
 export function exitCodeFor(code: string): number {
-  return code === "AUTH_MISSING" || code === "VALIDATION_ERROR" ? 2 : 1;
+  return code === "AUTH_MISSING" || code === "VALIDATION_ERROR" || code === "AUTH_FAILED" ? 2 : 1;
 }
