@@ -1,0 +1,63 @@
+{
+  "name": "stitch-design-cli",
+  "version": "0.1.0",
+  "description": "Agent-first CLI + skill for Google's official Stitch SDK",
+  "license": "MIT",
+  "author": "Daniel G Wilson",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielgwilson/stitch-design-cli.git"
+  },
+  "homepage": "https://github.com/danielgwilson/stitch-design-cli#readme",
+  "bugs": {
+    "url": "https://github.com/danielgwilson/stitch-design-cli/issues"
+  },
+  "bin": {
+    "stitch": "dist/cli.js",
+    "stitch-design-cli": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "SKILL.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "stitch",
+    "google-stitch",
+    "design",
+    "cli",
+    "agent-first",
+    "mcp",
+    "sdk"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json && node -e \"require('node:fs').chmodSync('dist/cli.js',0o755)\"",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "npm run typecheck",
+    "pretest": "npm run build",
+    "test": "tsx --test test/**/*.test.ts",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm test",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@google/stitch-sdk": "^0.0.3",
+    "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
