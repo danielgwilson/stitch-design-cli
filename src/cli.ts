@@ -15,6 +15,7 @@ import {
 } from "./normalize.js";
 import { createSdkContext, hasAuth, AUTH_HELP_TEXT } from "./stitch-client.js";
 import { exitCodeFor, fail, makeError, ok, printJson } from "./output.js";
+import { withSuppressedTransportNoise } from "./transport-noise.js";
 
 type CommonJsonOptions = { json?: boolean };
 type DeviceType = "DEVICE_TYPE_UNSPECIFIED" | "MOBILE" | "DESKTOP" | "TABLET" | "AGNOSTIC";
@@ -72,19 +73,6 @@ function printHuman(value: unknown): void {
   }
   // eslint-disable-next-line no-console
   console.log(JSON.stringify(value, null, 2));
-}
-
-async function withSuppressedTransportNoise<T>(task: () => Promise<T>): Promise<T> {
-  const originalError = console.error;
-  console.error = (...args: unknown[]) => {
-    if (typeof args[0] === "string" && args[0].startsWith("Stitch Transport Error:")) return;
-    originalError(...args);
-  };
-  try {
-    return await task();
-  } finally {
-    console.error = originalError;
-  }
 }
 
 function emitFailure(error: unknown, json = false, meta?: Record<string, unknown>): void {
@@ -175,31 +163,68 @@ async function main(): Promise<void> {
 
   auth
     .command("set")
-    .description("Save a Stitch API key locally")
+    .description("Save Stitch credentials locally")
     .option("--api-key <value>", "API key to save")
+    .option("--access-token <value>", "OAuth access token to save")
+    .option("--project-id <value>", "Project id to pair with OAuth access token")
     .option("--stdin", "Read API key from stdin")
     .option("--base-url <url>", "Override Stitch MCP base URL")
     .option("--timeout-ms <ms>", "Override request timeout in milliseconds", parsePositiveInteger)
     .option("--json", "Print JSON output")
-    .action(async (options: { apiKey?: string; stdin?: boolean; baseUrl?: string; timeoutMs?: number; json?: boolean }) => {
+    .action(
+      async (options: {
+        apiKey?: string;
+        accessToken?: string;
+        projectId?: string;
+        stdin?: boolean;
+        baseUrl?: string;
+        timeoutMs?: number;
+        json?: boolean;
+      }) => {
       try {
-        const apiKey = options.stdin ? (await readStdin()).trim() : options.apiKey?.trim() || (await promptForApiKey());
-        if (!apiKey) {
+        const accessToken = options.accessToken?.trim();
+        const projectId = options.projectId?.trim();
+        const usingOauth = Boolean(accessToken || projectId);
+
+        if (usingOauth && (!accessToken || !projectId)) {
+          emitFailure(
+            {
+              code: "VALIDATION_ERROR",
+              message: "OAuth auth requires both --access-token and --project-id",
+            },
+            Boolean(options.json),
+          );
+          return;
+        }
+
+        const apiKey = usingOauth
+          ? undefined
+          : options.stdin
+            ? (await readStdin()).trim()
+            : options.apiKey?.trim() || (await promptForApiKey());
+
+        if (!usingOauth && !apiKey) {
           emitFailure({ code: "VALIDATION_ERROR", message: "Expected a non-empty API key" }, Boolean(options.json));
           return;
         }
 
-        const { config, validation } = await saveAndValidateConfig({
-          apiKey,
-          baseUrl: options.baseUrl,
-          timeoutMs: options.timeoutMs,
-        });
+        const { config, validation } = await withSuppressedTransportNoise(() =>
+          saveAndValidateConfig({
+            apiKey,
+            accessToken,
+            projectId,
+            baseUrl: options.baseUrl,
+            timeoutMs: options.timeoutMs,
+          }),
+        );
 
         const data = {
           saved: true,
           configPath: getConfigPath(),
-          authMode: "apiKey",
+          authMode: usingOauth ? "oauth" : "apiKey",
           apiKeyRedacted: redactSecret(config.apiKey),
+          accessTokenRedacted: redactSecret(config.accessToken),
+          projectId: config.projectId || null,
           baseUrl: config.baseUrl || null,
           timeoutMs: config.timeoutMs || null,
           validation,
@@ -219,7 +244,9 @@ async function main(): Promise<void> {
     .action(async (options: CommonJsonOptions) => {
       try {
         const config = await resolveConfig();
-        const validation = hasAuth(config) ? await validateAuth(config) : { ok: false, reason: "Missing Stitch credentials" };
+        const validation = hasAuth(config)
+          ? await withSuppressedTransportNoise(() => validateAuth(config))
+          : { ok: false, reason: "Missing Stitch credentials" };
         const data = {
           authMode: config.authMode,
           source: config.source,
@@ -285,19 +312,26 @@ async function main(): Promise<void> {
 
       const ctx = createSdkContext(config);
       try {
-        try {
-          const toolResponse = await ctx.client.listTools();
-          checks.push({ name: "api.tools.list", ok: true, detail: `${toolResponse.tools.length} tools` });
-        } catch (error: any) {
-          checks.push({ name: "api.tools.list", ok: false, detail: error?.message || "Failed" });
-        }
+        await withSuppressedTransportNoise(async () => {
+          try {
+            const toolResponse = await ctx.client.listTools();
+            checks.push({ name: "api.tools.list", ok: true, detail: `${toolResponse.tools.length} tools` });
+          } catch (error: any) {
+            checks.push({ name: "api.tools.list", ok: false, detail: makeError(error).message });
+          }
 
-        try {
-          const projects = await ctx.sdk.projects();
-          checks.push({ name: "api.projects.list", ok: true, detail: `${projects.length} projects` });
-        } catch (error: any) {
-          checks.push({ name: "api.projects.list", ok: false, detail: error?.message || "Failed" });
-        }
+          try {
+            const projects = await ctx.sdk.projects();
+            checks.push({ name: "api.projects.list", ok: true, detail: `${projects.length} projects` });
+          } catch (error: any) {
+            const normalized = makeError(error);
+            checks.push({
+              name: "api.projects.list",
+              ok: false,
+              detail: normalized.detail || normalized.message,
+            });
+          }
+        });
 
         const allOk = checks.every((check) => check.ok);
         if (allOk) {

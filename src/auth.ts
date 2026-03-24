@@ -1,5 +1,7 @@
 import { inferAuthMode, type ResolvedConfig, type StitchCliConfig, writeConfig } from "./config.js";
+import { makeError } from "./output.js";
 import { createSdkContext } from "./stitch-client.js";
+import { withSuppressedTransportNoise } from "./transport-noise.js";
 
 export type AuthValidation = {
   ok: boolean;
@@ -25,7 +27,7 @@ export async function validateAuth(config: StitchCliConfig | ResolvedConfig): Pr
 
   const { client, sdk } = createSdkContext(normalized);
   try {
-    const projects = await sdk.projects();
+    const projects = await withSuppressedTransportNoise(() => sdk.projects());
     return {
       ok: true,
       sample: {
@@ -33,9 +35,10 @@ export async function validateAuth(config: StitchCliConfig | ResolvedConfig): Pr
       },
     };
   } catch (error: any) {
+    const normalizedError = makeError(error);
     return {
       ok: false,
-      reason: error?.message || "Validation failed",
+      reason: normalizedError.detail || normalizedError.message || "Validation failed",
     };
   } finally {
     await client.close();
