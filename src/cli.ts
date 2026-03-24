@@ -447,27 +447,44 @@ async function main(): Promise<void> {
 
   screen
     .command("get")
-    .description("Get one screen in a project")
+    .description("Get one or more screens in a project")
     .requiredOption("--project-id <projectId>", "Project id")
-    .requiredOption("--screen-id <screenId>", "Screen id")
+    .requiredOption("--screen-id <screenId>", "One or more screen ids; repeat or pass comma-separated values", collectStrings, [])
     .option("--include-html", "Include the HTML artifact URL")
     .option("--include-image", "Include the screenshot artifact URL")
     .option("--json", "Print JSON output")
     .action(
       async (options: {
         projectId: string;
-        screenId: string;
+        screenId: string[];
         includeHtml?: boolean;
         includeImage?: boolean;
         json?: boolean;
       }) => {
-        await runWithSdk(options, async ({ sdk }) => {
-          const item = await sdk.project(options.projectId).getScreen(options.screenId);
-          const [htmlUrl, imageUrl] = await Promise.all([
-            options.includeHtml ? item.getHtml() : Promise.resolve(undefined),
-            options.includeImage ? item.getImage() : Promise.resolve(undefined),
-          ]);
-          return serializeScreen(item, { htmlUrl, imageUrl });
+        await runWithSdk(options, async ({ config, sdk }) => {
+          const requestedScreenIds = splitCsv(options.screenId);
+          const items: Record<string, unknown>[] = [];
+          for (const screenId of requestedScreenIds) {
+            const isolated = requestedScreenIds.length > 1 ? createSdkContext(config) : null;
+            const activeSdk = isolated?.sdk ?? sdk;
+            try {
+              const item = await activeSdk.project(options.projectId).getScreen(screenId);
+              const [htmlUrl, imageUrl] = await Promise.all([
+                options.includeHtml ? item.getHtml() : Promise.resolve(undefined),
+                options.includeImage ? item.getImage() : Promise.resolve(undefined),
+              ]);
+              items.push(serializeScreen(item, { htmlUrl, imageUrl }));
+            } finally {
+              if (isolated) await isolated.client.close();
+            }
+          }
+
+          if (items.length === 1) return items[0];
+          return {
+            projectId: options.projectId,
+            count: items.length,
+            items,
+          };
         });
       },
     );
@@ -514,6 +531,7 @@ async function main(): Promise<void> {
             screens,
             extractOutputMessages(raw),
             options,
+            { kind: "generate" },
           );
         });
       },
@@ -565,6 +583,7 @@ async function main(): Promise<void> {
             screens,
             extractOutputMessages(raw),
             options,
+            { kind: "edit" },
           );
         });
       },
@@ -633,6 +652,7 @@ async function main(): Promise<void> {
             screens,
             extractOutputMessages(raw),
             options,
+            { kind: "variants" },
           );
         });
       },
