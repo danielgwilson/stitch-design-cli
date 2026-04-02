@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { inferAuthMode, redactSecret } from "../src/config.js";
 
+const SAMPLE_SECRET = "test_secret_for_redaction_0123456789";
+
 test("redactSecret keeps only a small prefix and suffix", () => {
-  assert.equal(redactSecret("AQ.Asynthetic_test_fixture_not_a_real_token_____________________1hDw"), "AQ.A…1hDw");
+  assert.equal(redactSecret(SAMPLE_SECRET), "test…6789");
 });
 
 test("inferAuthMode prefers apiKey when present", () => {
