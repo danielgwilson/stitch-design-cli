@@ -32,6 +32,16 @@ Or run it without installing:
 npx -y stitch-design-cli doctor --json
 ```
 
+## Skill Install
+
+Install the agent skill from the canonical nested skill path:
+
+```bash
+npx -y skills add -g danielgwilson/stitch-design-cli --skill stitch
+```
+
+The skill lives at `skills/stitch/SKILL.md`; the package does not ship a duplicate root `SKILL.md`.
+
 ## Auth
 
 The CLI supports both auth modes exposed by the official Stitch SDK:
@@ -39,7 +49,7 @@ The CLI supports both auth modes exposed by the official Stitch SDK:
 - API key
 - OAuth access token plus project id
 
-Save a key locally:
+For repeated use, save credentials locally. The API key path can prompt interactively:
 
 ```bash
 stitch auth set
@@ -58,19 +68,15 @@ export STITCH_API_KEY=...
 stitch doctor --json
 ```
 
-Save OAuth locally:
-
-```bash
-stitch auth set --access-token "$STITCH_ACCESS_TOKEN" --project-id "$GOOGLE_CLOUD_PROJECT"
-```
-
-Or use OAuth env directly:
+For OAuth, prefer env vars for ephemeral use so the access token does not appear in shell history or process arguments:
 
 ```bash
 export STITCH_ACCESS_TOKEN=...
 export GOOGLE_CLOUD_PROJECT=...
 stitch doctor --json
 ```
+
+For local OAuth config, use the CLI only in a private shell and avoid writing tokens into logs, docs, or chat.
 
 If `tool list` works but `project list` fails with `AUTH_FAILED`, the configured credentials reached Stitch but were rejected for project access. In that case, rotate the API key or switch to OAuth.
 
@@ -115,4 +121,5 @@ Stable machine-readable behavior is documented in [docs/CONTRACT_V1.md](./docs/C
 
 - CI workflow: `.github/workflows/ci.yml`
 - publish workflow: `.github/workflows/publish.yml`
+- local release gate: `npm run check:release`
 - trusted publishing notes: `stitch-trusted-publishing-notes.md`

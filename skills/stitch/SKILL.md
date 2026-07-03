@@ -63,10 +63,9 @@ If `stitch doctor --json` reports missing auth:
 - Best interactive path: `stitch auth set`
 - Best ephemeral path: `STITCH_API_KEY=... stitch doctor --json`
 - Saved local config: `printf '%s' "$STITCH_API_KEY" | stitch auth set --stdin`
-- OAuth local config: `stitch auth set --access-token "$STITCH_ACCESS_TOKEN" --project-id "$GOOGLE_CLOUD_PROJECT"`
 - OAuth env path: `STITCH_ACCESS_TOKEN=... GOOGLE_CLOUD_PROJECT=... stitch doctor --json`
 
-Avoid pasting full keys into logs or chat.
+Avoid token-bearing CLI flags in examples and automation. Prefer stdin for API keys, env vars for ephemeral OAuth, and local config for repeated use. Do not paste full keys or tokens into logs or chat.
 
 ## Quick verification
 
