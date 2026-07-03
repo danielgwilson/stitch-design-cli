@@ -1,0 +1,10 @@
+interface:
+  display_name: "Stitch"
+  short_description: "Inspect and mutate Stitch projects and screens via the official SDK-backed CLI."
+  icon_small: "./assets/stitch-small.svg"
+  icon_large: "./assets/stitch.svg"
+  brand_color: "#2563EB"
+  default_prompt: "Use $stitch to inspect Stitch auth, projects, and screens, then generate or edit screens through the stitch CLI when requested."
+
+policy:
+  allow_implicit_invocation: true
